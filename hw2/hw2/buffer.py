@@ -206,7 +206,6 @@ class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
         self.weights = np.zeros(capacity)
 
 
-        raise NotImplementedError
         ############################
     def __repr__(self) -> str:
         return f'Prioritized{self.n_step}StepReplayBuffer'
@@ -225,7 +224,7 @@ class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
         else:
             self.weights[self.idx - 1] = self.max_priority
         
-        raise NotImplementedError
+        #raise NotImplementedError
         ############################
         
     def sample(self, batch_size):
@@ -251,7 +250,7 @@ class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
             weights = weights / weights.max() 
         
         
-        raise NotImplementedError
+        #raise NotImplementedError
         ############################
         return batch, weights, sample_idxs
 
