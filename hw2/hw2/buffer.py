@@ -121,9 +121,10 @@ class NStepReplayBuffer(ReplayBuffer):
                     done = True
                     break
 
+        return state, action, overall_reward, done
+
         raise NotImplementedError
         ############################
-        return state, action, overall_reward, done
 
     def add(self, transition):
         state, action, reward, next_state, done = transition
