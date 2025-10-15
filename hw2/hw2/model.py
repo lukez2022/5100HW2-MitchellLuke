@@ -42,6 +42,13 @@ class DuelingQNetwork(nn.Module):
         """
         ############################
         # YOUR IMPLEMENTATION HERE #
+        
+        feats = self.feature_layer(state)
+        val = self.value_head(feats) #doesn't depend on a
+        advs = self.advantage_head(feats)
+        mean_advs = advs.mean(dim=1, keepdim=True) #mean over all a
+        
+        Qs = val + advs - mean_advs 
 
         raise NotImplementedError
         ############################
