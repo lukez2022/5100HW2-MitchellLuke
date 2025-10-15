@@ -74,6 +74,24 @@ class ReplayBuffer:
 
         ############################
         return batch
+    
+    def sample_from_indices (self, indices): #(helper function)
+        batch = ()
+        # get a batch of data from the buffer according to the sample_idxs
+        # please transfer the data to the corresponding device before return
+        ############################
+        # YOUR IMPLEMENTATION HERE #
+
+        state = self.state[indices].to(self.device)
+        action = self.action[indices].long().to(self.device)
+        reward = self.reward[indices].unsqueeze(1).to(self.device)
+        next_state = self.next_state[indices].to(self.device)
+        done = self.done[indices].unsqueeze(1).float().to(self.device)
+        batch = (state, action, reward, next_state, done)
+
+        ############################
+        return batch
+        
 
 
 class NStepReplayBuffer(ReplayBuffer):
@@ -117,7 +135,12 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         """
         Add a new experience to memory, and update it's priority to the max_priority.
         """
-
+        super().add(transition)
+        if self.size >= self.capacity:
+            self.weights[self.idx] = self.max_priority #overwrite oldest if buffer full
+        else:
+            self.weights[self.idx - 1] = self.max_priority
+            
 
     def sample(self, batch_size):
         """
@@ -129,7 +152,19 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         """
         ############################
         # YOUR IMPLEMENTATION HERE #
-
+        
+        if self.size >= self.capacity:
+            priorities = self.weights
+        else:
+            priorities = self.weights[:self.size]
+        p_is = priorities / priorities.sum()
+        sample_idxs = np.random.choice(self.size, batch_size, p=p_is, replace=False)
+        batch = super().sample_from_indices(sample_idxs)
+        weights = (1 / (self.size * p_is[sample_idxs])) ** (self.beta)
+        if weights.max() > 0:
+            weights = weights / weights.max() 
+        
+        
         raise NotImplementedError
         ############################
         return batch, weights, sample_idxs
