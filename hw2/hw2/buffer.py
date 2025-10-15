@@ -108,10 +108,22 @@ class NStepReplayBuffer(ReplayBuffer):
         """Get n-step state, action, reward and done for the transition, discard those rewards after done=True"""
         ############################
         # YOUR IMPLEMENTATION HERE #
+        (state, action, first_reward, first_done) = self.n_step_buffer[0]
+        overall_reward = first_reward
+        done=False
+        if first_done:
+            return (state, action, first_reward, first_done)
+        else:
+            for k in range(1, len(self.n_step_buffer)):
+                (state, action, step_reward, step_done) = self.n_step_buffer[k]
+                overall_reward += (self.gamma ** k) * step_reward
+                if step_done:
+                    done = True
+                    break
 
         raise NotImplementedError
         ############################
-        return state, action, reward, done
+        return state, action, overall_reward, done
 
     def add(self, transition):
         state, action, reward, next_state, done = transition
@@ -180,10 +192,18 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
 
 # Avoid Diamond Inheritance
-class PrioritizedNStepReplayBuffer():
+class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
     def __init__(self, capacity, eps, alpha, beta, n_step, gamma, state_size, device):
         ############################
         # YOUR IMPLEMENTATION HERE #
+        self.eps = eps  # minimal priority for stability
+        self.alpha = alpha  # determines how much prioritization is used, α = 0 corresponding to the uniform case
+        self.beta = beta  # determines the amount of importance-sampling correction, b = 1 fully compensate for the non-uniform probabilities
+        self.max_priority = eps  # priority for new samples, init as eps
+        super().__init__(capacity, n_step, gamma, state_size, device)
+        self.n_step_buffer = deque([], maxlen=n_step)
+        self.weights = np.zeros(capacity)
+
 
         raise NotImplementedError
         ############################
@@ -193,8 +213,51 @@ class PrioritizedNStepReplayBuffer():
     def add(self, transition):
         ############################
         # YOUR IMPLEMENTATION HERE #
-
+        (state, action, reward, next_state, done) = transition
+        self.n_step_buffer.append((state, action, reward, done))
+        if len(self.n_step_buffer) < self.n_step:
+            return
+        (n_step_state, n_step_action, n_step_reward, n_step_done) = self.n_step_handler()
+        super().add((n_step_state, n_step_action, n_step_reward, next_state, n_step_done))
+        if self.size >= self.capacity:
+            self.weights[self.idx] = self.max_priority #overwrite oldest if buffer full
+        else:
+            self.weights[self.idx - 1] = self.max_priority
+        
         raise NotImplementedError
         ############################
+        
+    def sample(self, batch_size):
+        """
+        Sample a batch of experiences from the buffer with priority, and calculates the weights used for the correction of bias used in the Q-learning update
+        Returns:
+            batch: a batch of experiences as in the normal replay buffer
+            weights: torch.Tensor (batch_size, ), importance sampling weights for each sample
+            sample_idxs: numpy.ndarray (batch_size, ), the indexes of the sample in the buffer
+        """
+        ############################
+        # YOUR IMPLEMENTATION HERE #
+        
+        if self.size >= self.capacity:
+            priorities = self.weights
+        else:
+            priorities = self.weights[:self.size]
+        p_is = priorities / priorities.sum()
+        sample_idxs = np.random.choice(self.size, batch_size, p=p_is, replace=False)
+        batch = super().sample_from_indices(sample_idxs)
+        weights = (1 / (self.size * p_is[sample_idxs])) ** (self.beta)
+        if weights.max() > 0:
+            weights = weights / weights.max() 
+        
+        
+        raise NotImplementedError
+        ############################
+        return batch, weights, sample_idxs
+
+    def update_priorities(self, data_idxs, priorities: np.ndarray):
+        priorities = (priorities + self.eps) ** self.alpha
+
+        self.weights[data_idxs] = priorities
+        self.max_priority = max(self.weights)
 
     # def the other necessary class methods as your need
