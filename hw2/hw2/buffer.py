@@ -123,7 +123,6 @@ class NStepReplayBuffer(ReplayBuffer):
 
         return state, action, overall_reward, done
 
-        raise NotImplementedError
         ############################
 
     def add(self, transition):
@@ -176,13 +175,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         weights = (1 / (self.size * p_is[sample_idxs])) ** (self.beta)
         if weights.max() > 0:
             weights = weights / weights.max() 
-        
-        
-        raise NotImplementedError
+        weights = torch.as_tensor(weights, dtype=torch.float, device=self.device).unsqueeze(1)
+    
         ############################
         return batch, weights, sample_idxs
 
     def update_priorities(self, data_idxs, priorities: np.ndarray):
+        priorities = np.asarray(priorities, dtype=np.float32).reshape(-1)
         priorities = (priorities + self.eps) ** self.alpha
 
         self.weights[data_idxs] = priorities
@@ -192,7 +191,6 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         return 'PrioritizedReplayBuffer'
 
 
-# Avoid Diamond Inheritance
 class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
     def __init__(self, capacity, eps, alpha, beta, n_step, gamma, state_size, device):
         ############################
@@ -213,12 +211,12 @@ class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
     def add(self, transition):
         ############################
         # YOUR IMPLEMENTATION HERE #
-        (state, action, reward, next_state, done) = transition
+        (state, action, reward, n_step_next_state, done) = transition
         self.n_step_buffer.append((state, action, reward, done))
         if len(self.n_step_buffer) < self.n_step:
             return
-        (n_step_state, n_step_action, n_step_reward, n_step_done) = self.n_step_handler()
-        super().add((n_step_state, n_step_action, n_step_reward, next_state, n_step_done))
+        (n_step_state, n_step_action, n_step_reward, n_step_next_state, n_step_done) = self.n_step_handler()
+        super().add((n_step_state, n_step_action, n_step_reward, n_step_next_state, n_step_done))
         if self.size >= self.capacity:
             self.weights[self.idx] = self.max_priority #overwrite oldest if buffer full
         else:
@@ -248,7 +246,7 @@ class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
         weights = (1 / (self.size * p_is[sample_idxs])) ** (self.beta)
         if weights.max() > 0:
             weights = weights / weights.max() 
-        
+        weights = torch.as_tensor(weights, dtype=torch.float, device=self.device).unsqueeze(1)
         
         #raise NotImplementedError
         ############################

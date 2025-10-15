@@ -4,6 +4,7 @@ import torch.optim as optim
 from copy import deepcopy
 from model import QNetwork, DuelingQNetwork
 from gymnasium.wrappers import TimeLimit
+import numpy as np
 
 class DQNAgent:
     def __init__(self, state_size, action_size, cfg, device='cuda'):
@@ -97,7 +98,7 @@ class DQNAgent:
         if not step % self.target_update_interval:
             with torch.no_grad():
                 self.soft_update(self.target_net, self.q_net)
-
+    
         return loss.item(), td_error, Q.mean().item()
 
     def save(self, name):

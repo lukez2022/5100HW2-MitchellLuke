@@ -50,6 +50,5 @@ class DuelingQNetwork(nn.Module):
         
         Qs = val + advs - mean_advs 
 
-        raise NotImplementedError
         ############################
         return Qs
