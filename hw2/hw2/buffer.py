@@ -109,8 +109,10 @@ class NStepReplayBuffer(ReplayBuffer):
         ############################
         # YOUR IMPLEMENTATION HERE #
         (state, action, first_reward, first_done) = self.n_step_buffer[0]
+        first_state = state
+        first_action = action
         overall_reward = first_reward
-        done=False
+        done=first_done
         if first_done:
             return (state, action, first_reward, first_done)
         else:
@@ -121,7 +123,7 @@ class NStepReplayBuffer(ReplayBuffer):
                     done = True
                     break
 
-        return state, action, overall_reward, done
+        return first_state, first_action, overall_reward, done
 
         ############################
 
