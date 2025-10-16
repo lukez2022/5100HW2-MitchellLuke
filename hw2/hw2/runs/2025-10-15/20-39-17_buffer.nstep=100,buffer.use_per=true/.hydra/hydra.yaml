@@ -112,11 +112,12 @@ hydra:
     hydra:
     - hydra.mode=RUN
     task:
+    - buffer.use_per=true
     - buffer.nstep=100
   job:
     name: main
     chdir: true
-    override_dirname: buffer.nstep=100
+    override_dirname: buffer.nstep=100,buffer.use_per=true
     id: ???
     num: ???
     config_name: config
@@ -141,7 +142,7 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: D:\Desktop\WashU PhD\Deep RL\HW2repo\5100HW2-MitchellLuke\hw2\hw2\runs\2025-10-15\16-11-08_buffer.nstep=100
+    output_dir: D:\Desktop\WashU PhD\Deep RL\HW2repo\5100HW2-MitchellLuke\hw2\hw2\runs\2025-10-15\20-39-17_buffer.nstep=100,buffer.use_per=true
     choices:
       hydra/env: default
       hydra/callbacks: null

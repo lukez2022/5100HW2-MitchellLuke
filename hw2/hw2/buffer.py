@@ -193,32 +193,51 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         return 'PrioritizedReplayBuffer'
 
 
-class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
+class PrioritizedNStepReplayBuffer(PrioritizedReplayBuffer):
     def __init__(self, capacity, eps, alpha, beta, n_step, gamma, state_size, device):
         ############################
         # YOUR IMPLEMENTATION HERE #
-        self.eps = eps  # minimal priority for stability
-        self.alpha = alpha  # determines how much prioritization is used, α = 0 corresponding to the uniform case
-        self.beta = beta  # determines the amount of importance-sampling correction, b = 1 fully compensate for the non-uniform probabilities
-        self.max_priority = eps  # priority for new samples, init as eps
-        super().__init__(capacity, n_step, gamma, state_size, device)
+        super().__init__(capacity, eps, alpha, beta, state_size, device)
+        self.n_step = n_step
+        self.gamma = gamma
         self.n_step_buffer = deque([], maxlen=n_step)
-        self.weights = np.zeros(capacity)
 
 
         ############################
     def __repr__(self) -> str:
         return f'Prioritized{self.n_step}StepReplayBuffer'
 
+    def n_step_handler(self):
+        (state, action, first_reward, next_state, first_done) = self.n_step_buffer[0]
+        first_state = state
+        first_action = action
+        overall_reward = first_reward
+        done = first_done
+        n_step_next_state = next_state
+
+        if first_done:
+            return (first_state, first_action, first_reward, n_step_next_state, first_done)
+        else:
+            for k in range(1, len(self.n_step_buffer)):
+                (state, action, step_reward, next_state, step_done) = self.n_step_buffer[k]
+                overall_reward += (self.gamma ** k) * step_reward
+                n_step_next_state = next_state
+                if step_done:
+                    done = True
+                    break
+
+        return first_state, first_action, overall_reward, n_step_next_state, done
+
     def add(self, transition):
         ############################
         # YOUR IMPLEMENTATION HERE #
-        (state, action, reward, n_step_next_state, done) = transition
-        self.n_step_buffer.append((state, action, reward, done))
+        state, action, reward, next_state, done = transition
+        self.n_step_buffer.append((state, action, reward, next_state, int(done)))
         if len(self.n_step_buffer) < self.n_step:
             return
-        (n_step_state, n_step_action, n_step_reward, n_step_next_state, n_step_done) = self.n_step_handler()
-        super().add((n_step_state, n_step_action, n_step_reward, n_step_next_state, n_step_done))
+        n_transition = self.n_step_handler()
+        super().add(n_transition)
+        
         if self.size >= self.capacity:
             self.weights[self.idx] = self.max_priority #overwrite oldest if buffer full
         else:
@@ -255,6 +274,7 @@ class PrioritizedNStepReplayBuffer(NStepReplayBuffer):
         return batch, weights, sample_idxs
 
     def update_priorities(self, data_idxs, priorities: np.ndarray):
+        priorities = np.asarray(priorities, dtype=np.float32).reshape(-1)
         priorities = (priorities + self.eps) ** self.alpha
 
         self.weights[data_idxs] = priorities

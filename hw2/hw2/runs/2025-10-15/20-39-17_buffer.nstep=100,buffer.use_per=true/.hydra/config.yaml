@@ -25,8 +25,8 @@ agent:
   use_double: false
 buffer:
   capacity: 50000
-  use_per: false
-  nstep: 3
+  use_per: true
+  nstep: 100
   gamma: ${agent.gamma}
   per_alpha: 0.7
   per_beta: 0.4
